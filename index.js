@@ -1,7 +1,7 @@
 (() => {
   let model = initNetwork(3);
-  let inputs = [[4,5,6], [3,5,6], [7,5,2], [4,5,6.2]];
-  let outputs = [[0,1,0], [0,0,1], [1,0,0],[0,1,0]];
+  let inputs = [[4,5,6], [3,5,6], [7,5,2], [4,5,6.2], [4,9,8]];
+  let outputs = [[0,1,0], [0,0,1], [1,0,0],[0,1,0],[0,0,1]];
   let modelUpd = train(model, inputs, outputs, 0.0001, 0.001);
   let results = process(modelUpd, [6.99,5,2.1]);
   console.log(results);
@@ -14,11 +14,11 @@ function multiplyMatrix(a, b) {
   for (let r = 0; r < aNumRows; ++r) {
     m[r] = new Array(bNumCols); 
     for (let c = 0; c < bNumCols; ++c) {
-      m[r][c] = 0;             
+      m[r][c] = 0; 
       for (var i = 0; i < aNumCols; ++i) {
         m[r][c] += a[r][i] * b[i][c];
       }
-    }                                                                                                                                     
+    }
   }
   return m;
 }
@@ -30,31 +30,31 @@ function multiplyMatrixElementWise(a, b) {
     m[r] = new Array(aNumCols); 
     for (let c = 0; c < aNumCols; ++c) {
       m[r][c] = a[r][c] * b[r][c];
-    }                                                                                                                                     
+    }
   }
   return m;
 }
 
 function diffMatrix(a, b) {
   let aNumRows = a.length, aNumCols = a[0].length;
-      m = new Array(aNumRows);  // initialize array of rows
+      m = new Array(aNumRows); 
   for (let r = 0; r < aNumRows; ++r) {
-    m[r] = new Array(aNumCols); // initialize the current row
+    m[r] = new Array(aNumCols); 
     for (let c = 0; c < aNumCols; ++c) {
       m[r][c] = a[r][c] - b[r][c];
-    }                                                                                                                                     
+    } 
   }
   return m;
 }
 
 function sumMatrix(a, b) {
   let aNumRows = a.length, aNumCols = a[0].length;
-      m = new Array(aNumRows);  // initialize array of rows
+      m = new Array(aNumRows); 
   for (let r = 0; r < aNumRows; ++r) {
-    m[r] = new Array(aNumCols); // initialize the current row
+    m[r] = new Array(aNumCols); 
     for (let c = 0; c < aNumCols; ++c) {
       m[r][c] = a[r][c] + b[r][c];
-    }                                                                                                                                     
+    }
   }
   return m;
 }
@@ -71,10 +71,6 @@ function convertVec2Col(vec) {
     result.push([item]);
   }) 
   return result;
-}
-
-function tanh(x) {
-  return (Math.exp(x)-Math.exp(-x))/(Math.exp(x)+Math.exp(-x))
 }
 
 function sigma(x) {
@@ -101,7 +97,7 @@ function sigma_der(x) {
 }
 
 function tanh_der(x) {
-  return 1-Math.pow(tanh(x),2);
+  return 1-Math.pow(Math.tanh(x),2);
 }
 
 function initLayer(n_neurons, n_inputs, seed, delta) {
@@ -125,7 +121,7 @@ function initNetwork(n_layers) {
 }
 
 function tanh2Matrix(m) {
-  return func2Matrix(m,tanh);
+  return func2Matrix(m,Math.tanh);
 }
 
 function sigma_deriv2Matrix(m) {
@@ -217,43 +213,30 @@ function updateWeights(model, dw_results, learn_rate) {
   })
 }
 
-function calcCrossEntropyCost(y_hat, y) {
-  y = convertVec2Col(y);
-  const oneDiffFunc = (e) => {return 1-e}
-  res = sumMatrix( 
-    multiplyMatrixElementWise( y, log2Matrix(y_hat)), 
-    multiplyMatrixElementWise( func2Matrix(y, oneDiffFunc), log2Matrix( func2Matrix(y_hat, oneDiffFunc) ) ) 
-  ); 
-  var res_sum = 0;
-  res.forEach( el => {
-    return (res_sum += el[0]);
-  });
-  let result = res_sum * (-1/y.length);
-  return result;
-}
-
 function calcError(y_hat, y) {
   y = convertVec2Col(y);
   let result = 0;
   for (let i = 0; i < y.length; i++) {
-    result += (1/2) * Math.pow((y_hat[i][0] - y[i][0]), 2);
+    result += Math.pow((y_hat[i][0] - y[i][0]), 2);
   }
-  return result;
+  //console.log(y_hat, y);
+  return result / y.length;
 }
 
 function train(model, inputs, outputs, learn_rate, expectedError) {
   var iter = 0;
   var error = null;
-  const MAX_ITERATIONS = 100000;
+  const MAX_ITERATIONS = 1000000;
   do {
     actualCost = 0;
+    error = 0;
     inputs.forEach( (input, i) => {
       let cache = forwardPropagation(model, input);
       let dw_results = backwardPropagation(model, cache, outputs[i], input);
       model = updateWeights(model, dw_results, learn_rate);
-      let cost = calcCrossEntropyCost(cache.a_results[cache.a_results.length-1], outputs[i]);
-      error = calcError(cache.a_results[cache.a_results.length-1], outputs[i])
+      error += calcError(cache.a_results[cache.a_results.length-1], outputs[i])
     })
+    error = error / outputs.length;
     console.log(error);
     iter++;
   } while (expectedError < error && iter < MAX_ITERATIONS);
