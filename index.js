@@ -1,27 +1,68 @@
 (() => {
-  let model = initNetwork(4);
-  console.log(model);
-  console.log('\n');
-  let cache = forwardPropagation( model, [4,5,6]);
-  cache.z_results.forEach(z => { console.log(z) } );  
-  console.log('\n');
-  cache.a_results.forEach(a => { console.log(a) } );  
+  let model = initNetwork(3);
+  let inputs = [[4,5,6], [3,5,6], [7,5,2], [4,5,6.2]];
+  let outputs = [[0,1,0], [0,0,1], [1,0,0],[0,1,0]];
+  let modelUpd = train(model, inputs, outputs, 0.0001, 0.001);
+  let results = process(modelUpd, [6.99,5,2.1]);
+  console.log(results);
 })()
 
-function multiply(a, b) {
+function multiplyMatrix(a, b) {
   let aNumRows = a.length, aNumCols = a[0].length,
       bNumRows = b.length, bNumCols = b[0].length,
-      m = new Array(aNumRows);  // initialize array of rows
+      m = new Array(aNumRows);
   for (let r = 0; r < aNumRows; ++r) {
-    m[r] = new Array(bNumCols); // initialize the current row
+    m[r] = new Array(bNumCols); 
     for (let c = 0; c < bNumCols; ++c) {
-      m[r][c] = 0;             // initialize the current cell
+      m[r][c] = 0;             
       for (var i = 0; i < aNumCols; ++i) {
         m[r][c] += a[r][i] * b[i][c];
       }
     }                                                                                                                                     
   }
   return m;
+}
+
+function multiplyMatrixElementWise(a, b) {
+  let aNumRows = a.length, aNumCols = a[0].length;
+      m = new Array(aNumRows);  
+  for (let r = 0; r < aNumRows; ++r) {
+    m[r] = new Array(aNumCols); 
+    for (let c = 0; c < aNumCols; ++c) {
+      m[r][c] = a[r][c] * b[r][c];
+    }                                                                                                                                     
+  }
+  return m;
+}
+
+function diffMatrix(a, b) {
+  let aNumRows = a.length, aNumCols = a[0].length;
+      m = new Array(aNumRows);  // initialize array of rows
+  for (let r = 0; r < aNumRows; ++r) {
+    m[r] = new Array(aNumCols); // initialize the current row
+    for (let c = 0; c < aNumCols; ++c) {
+      m[r][c] = a[r][c] - b[r][c];
+    }                                                                                                                                     
+  }
+  return m;
+}
+
+function sumMatrix(a, b) {
+  let aNumRows = a.length, aNumCols = a[0].length;
+      m = new Array(aNumRows);  // initialize array of rows
+  for (let r = 0; r < aNumRows; ++r) {
+    m[r] = new Array(aNumCols); // initialize the current row
+    for (let c = 0; c < aNumCols; ++c) {
+      m[r][c] = a[r][c] + b[r][c];
+    }                                                                                                                                     
+  }
+  return m;
+}
+
+function transposeMatrix(m) {
+  return m[0].map( 
+    (col, i) => m.map(row => row[i])
+  );
 }
 
 function convertVec2Col(vec) {
@@ -33,18 +74,33 @@ function convertVec2Col(vec) {
 }
 
 function tanh(x) {
-  return (Math.exp(x)-Math.exp(-x))/Math.exp(x)+Math.exp(-x)
+  return (Math.exp(x)-Math.exp(-x))/(Math.exp(x)+Math.exp(-x))
 }
 
 function sigma(x) {
-  return 1/1+Math.exp(-x)
+  return 1/(1+Math.exp(-x))
+}
+
+function softmax(col_matrix) {
+  let z_exp = 0;
+  col_matrix.forEach( row => { 
+    row.forEach( el => {
+      z_exp += Math.exp(el);
+    }) 
+  })
+  let res = col_matrix.map( (row, i) => { 
+    return row.map( (el,j) => {
+      return Math.exp(el) / z_exp;
+    }) 
+  });
+  return res;
 }
 
 function sigma_der(x) {
   return sigma(x)(1-sigma(x));
 }
 
-function tanh_der() {
+function tanh_der(x) {
   return 1-Math.pow(tanh(x),2);
 }
 
@@ -69,21 +125,44 @@ function initNetwork(n_layers) {
 }
 
 function tanh2Matrix(m) {
-  m.forEach( row => {
-    row.forEach( elem => {
-      elem = tanh(elem);
-    })
-  })
-  return m;
+  return func2Matrix(m,tanh);
+}
+
+function sigma_deriv2Matrix(m) {
+  return func2Matrix(m,sigma_deriv);
+}
+
+function log2Matrix(m) {
+  return func2Matrix(m,Math.log);
+}
+
+function tanh_deriv2Matrix(m) {
+  return func2Matrix(m,tanh_der);
 }
 
 function sigma2Matrix(m) {
-  m.forEach( row => {
-    row.forEach( elem => {
-      elem = sigma(elem);
+  return func2Matrix(m,sigma);
+}
+
+function func2Matrix(m, fun) {
+  return m.map( row => {
+    return row.map( el => {
+      return fun(el);
     })
   })
-  return m;
+}
+
+function process(model, input) {
+  var a = input;
+  for (let i = 0; i < model.length; i++) {
+    let z = multiplyMatrix(model[i], convertVec2Col(a));
+    if (i != model.length-1) {
+      a = tanh2Matrix(z);
+    } else {
+      a = softmax(z);
+    }
+  }
+  return a;
 }
 
 function forwardPropagation(model, input) {
@@ -91,34 +170,92 @@ function forwardPropagation(model, input) {
   let z_results = [];
   var a = input;
   for (let i = 0; i < model.length; i++) {
-    let z = multiply(model[i], convertVec2Col(a));
+    let z = multiplyMatrix(model[i], convertVec2Col(a));
     if (i != model.length-1) {
       a = tanh2Matrix(z);
     } else {
-      a = sigma2Matrix(z);
+      a = softmax(z);
     }
     z_results.push(z);
     a_results.push(a);
   }
   return {
-    a_results,
-    z_results
+    a_results: a_results,
+    z_results: z_results
   }
 }
 
-function backwardPropagation(model, cache, output) {
+function backwardPropagation(model, cache, output, input) {
   var dz, dW;
-  for (let i = model.length-1; i > 0; i--) {
+  var dw_results = new Array(model.length-1);
+  for (let i = model.length-1; i >= 0; i--) {
     if (i == model.length-1) {
-      // dz = 
+      dz = diffMatrix( cache.a_results[i], convertVec2Col(output) );
     } else {
-      a = sigma2Matrix(z);
+      dz = multiplyMatrixElementWise( 
+        tanh_deriv2Matrix(cache.a_results[i]) ,
+        multiplyMatrix(dz, transposeMatrix(model[i])), 
+      );
     }
-    z_results.push(z);
-    a_results.push(a);
+    if (i > 1) {
+      dW = multiplyMatrix( dz, transposeMatrix(cache.a_results[i-1]) );
+    } else {
+      dW = multiplyMatrix( dz, transposeMatrix( convertVec2Col(input) ) );      
+    }
+    dw_results[i] = dW;
   }
-  return {
-    a_results,
-    z_results
+  return dw_results;
+}
+
+function updateWeights(model, dw_results, learn_rate) {
+  return model.map( (layer, i) => {
+    return layer.map( (neuron, j) => {
+      return neuron.map( (w, k) => {
+        return w - learn_rate * dw_results[i][j][k]
+      })
+    })
+  })
+}
+
+function calcCrossEntropyCost(y_hat, y) {
+  y = convertVec2Col(y);
+  const oneDiffFunc = (e) => {return 1-e}
+  res = sumMatrix( 
+    multiplyMatrixElementWise( y, log2Matrix(y_hat)), 
+    multiplyMatrixElementWise( func2Matrix(y, oneDiffFunc), log2Matrix( func2Matrix(y_hat, oneDiffFunc) ) ) 
+  ); 
+  var res_sum = 0;
+  res.forEach( el => {
+    return (res_sum += el[0]);
+  });
+  let result = res_sum * (-1/y.length);
+  return result;
+}
+
+function calcError(y_hat, y) {
+  y = convertVec2Col(y);
+  let result = 0;
+  for (let i = 0; i < y.length; i++) {
+    result += (1/2) * Math.pow((y_hat[i][0] - y[i][0]), 2);
   }
+  return result;
+}
+
+function train(model, inputs, outputs, learn_rate, expectedError) {
+  var iter = 0;
+  var error = null;
+  const MAX_ITERATIONS = 100000;
+  do {
+    actualCost = 0;
+    inputs.forEach( (input, i) => {
+      let cache = forwardPropagation(model, input);
+      let dw_results = backwardPropagation(model, cache, outputs[i], input);
+      model = updateWeights(model, dw_results, learn_rate);
+      let cost = calcCrossEntropyCost(cache.a_results[cache.a_results.length-1], outputs[i]);
+      error = calcError(cache.a_results[cache.a_results.length-1], outputs[i])
+    })
+    console.log(error);
+    iter++;
+  } while (expectedError < error && iter < MAX_ITERATIONS);
+  return model;
 }
