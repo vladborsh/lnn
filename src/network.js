@@ -1,18 +1,47 @@
-module.exports = {
-  initNetwork : initNetwork,
-  train : train,
+export {
+  initNetwork,
+  train,
+  process
 }
 
-function multiplyMatrix(a, b) {
+// (() => {
+//   let model = initNetwork(2);
+//   let inputs = [
+//     [76, 20, 24],
+//     [87.33, 34, 31],
+//     [87.67, 45, 52],
+//     [23, 77.33, 32.67],
+//     [23, 79.67, 4],
+//     [45, 45, 86.33],
+//     [34.33, 20.67, 82.67],
+//     [45.33, 51.33, 69.67]]
+//   let outputs = [
+//     [1, 0, 0],
+//     [1, 0, 0],
+//     [1, 0, 0],
+//     [0, 1, 0],
+//     [0, 1, 0],
+//     [0, 0, 1],
+//     [0, 0, 1],
+//     [0, 0, 1]]
+//   //let inputs = [[4,5,6], [3,5,6], [7,5,2], [4,5,6.2], [4,9,8]];
+//   //let outputs = [[0,1,0], [0,0,1], [1,0,0], [0,1,0], [0,0,1]];
+//   let modelUpd = train(model, inputs, outputs, 0.001, 0.001);
+//   let results = process(modelUpd, [75.33, 81.33, 69.67]);
+//   console.log(results);
+// })()
+
+function multiplyMatrix(a, b, action) {
   let aNumRows = a.length, aNumCols = a[0].length,
-      bNumRows = b.length, bNumCols = b[0].length,
-      m = new Array(aNumRows);
+      bNumRows = b.length, bNumCols = b[0].length;
+  var m = new Array(aNumRows);
   for (let r = 0; r < aNumRows; ++r) {
     m[r] = new Array(bNumCols); 
     for (let c = 0; c < bNumCols; ++c) {
       m[r][c] = 0; 
       for (var i = 0; i < aNumCols; ++i) {
         m[r][c] += a[r][i] * b[i][c];
+        if (isNaN(m[r][c])) throw { errro:'Element NaN', matrixA: a, matrixB: b, action }
       }
     }
   }
@@ -21,7 +50,7 @@ function multiplyMatrix(a, b) {
 
 function multiplyMatrixElementWise(a, b) {
   let aNumRows = a.length, aNumCols = a[0].length;
-      m = new Array(aNumRows);  
+  var m = new Array(aNumRows);  
   for (let r = 0; r < aNumRows; ++r) {
     m[r] = new Array(aNumCols); 
     for (let c = 0; c < aNumCols; ++c) {
@@ -33,7 +62,7 @@ function multiplyMatrixElementWise(a, b) {
 
 function diffMatrix(a, b) {
   let aNumRows = a.length, aNumCols = a[0].length;
-      m = new Array(aNumRows); 
+  var m = new Array(aNumRows); 
   for (let r = 0; r < aNumRows; ++r) {
     m[r] = new Array(aNumCols); 
     for (let c = 0; c < aNumCols; ++c) {
@@ -45,7 +74,7 @@ function diffMatrix(a, b) {
 
 function sumMatrix(a, b) {
   let aNumRows = a.length, aNumCols = a[0].length;
-      m = new Array(aNumRows); 
+  var m = new Array(aNumRows); 
   for (let r = 0; r < aNumRows; ++r) {
     m[r] = new Array(aNumCols); 
     for (let c = 0; c < aNumCols; ++c) {
@@ -56,14 +85,16 @@ function sumMatrix(a, b) {
 }
 
 function transposeMatrix(m) {
-  return m[0].map( 
+  let transposed = m[0].map( 
     (col, i) => m.map(row => row[i])
   );
+  return transposed;
 }
 
 function convertVec2Col(vec) {
-  result = [];
+  var result = [];
   vec.forEach( item => {
+    if (isNaN(item)) throw { errro:'Element NaN', vec }
     result.push([item]);
   }) 
   return result;
@@ -139,6 +170,8 @@ function sigma2Matrix(m) {
 function func2Matrix(m, fun) {
   return m.map( row => {
     return row.map( el => {
+      let f = fun(el);
+      if (isNaN(f)) throw { errro:'Element NaN', matrix: m }
       return fun(el);
     })
   })
@@ -162,7 +195,7 @@ function forwardPropagation(model, input) {
   let z_results = [];
   var a = input;
   for (let i = 0; i < model.length; i++) {
-    let z = multiplyMatrix(model[i], convertVec2Col(a));
+    let z = multiplyMatrix(model[i], convertVec2Col(a), 'forward');
     if (i != model.length-1) {
       a = tanh2Matrix(z);
     } else {
@@ -186,13 +219,13 @@ function backwardPropagation(model, cache, output, input) {
     } else {
       dz = multiplyMatrixElementWise( 
         tanh_deriv2Matrix(cache.a_results[i]) ,
-        multiplyMatrix(dz, transposeMatrix(model[i])), 
+        multiplyMatrix(dz, transposeMatrix(model[i]), 'dz * W_T'), 
       );
     }
     if (i > 1) {
-      dW = multiplyMatrix( dz, transposeMatrix(cache.a_results[i-1]) );
+      dW = multiplyMatrix( dz, transposeMatrix(cache.a_results[i-1]), 'dz * A_T' );
     } else {
-      dW = multiplyMatrix( dz, transposeMatrix( convertVec2Col(input) ) );      
+      dW = multiplyMatrix( dz, transposeMatrix( convertVec2Col(input) ), 'dz * input' );      
     }
     dw_results[i] = dW;
   }
@@ -203,7 +236,9 @@ function updateWeights(model, dw_results, learn_rate) {
   return model.map( (layer, i) => {
     return layer.map( (neuron, j) => {
       return neuron.map( (w, k) => {
-        return w - learn_rate * dw_results[i][j][k]
+        let newW = w - learn_rate * dw_results[i][j][k];
+        if (isNaN(newW)) throw { errro:'Element NaN', dw_results, model }
+        return newW;
       })
     })
   })
@@ -216,25 +251,38 @@ function calcError(y_hat, y) {
     result += Math.pow((y_hat[i][0] - y[i][0]), 2);
   }
   //console.log(y_hat, y);
+  //console.log('res', y_hat, y );
   return result / y.length;
 }
 
-function train(model, inputs, outputs, learn_rate, expectedError) {
+function train(model, inputs, outputs, learn_rate, expectedError, document) {
   var iter = 0;
   var error = null;
-  const MAX_ITERATIONS = 1000000;
+  const MAX_ITERATIONS = 100000;
+  var cache;
+  var dw_results;
+  console.log(model);
   do {
-    actualCost = 0;
     error = 0;
     inputs.forEach( (input, i) => {
-      let cache = forwardPropagation(model, input);
-      let dw_results = backwardPropagation(model, cache, outputs[i], input);
+      cache = forwardPropagation(model, input);
+      dw_results = backwardPropagation(model, cache, outputs[i], input);
       model = updateWeights(model, dw_results, learn_rate);
       error += calcError(cache.a_results[cache.a_results.length-1], outputs[i])
     })
     error = error / outputs.length;
-    console.log(error);
+    console.log('error', error);
+    if ( isNaN(error) ) {
+      console.log(model)
+      console.log(cache)
+      console.log(dw_results)
+    }
     iter++;
+    if (document) {
+      document.dispatchEvent(new CustomEvent('trainIterationResults', { 
+        detail: { error, model } 
+      }));
+    } 
   } while (expectedError < error && iter < MAX_ITERATIONS);
   return model;
 }

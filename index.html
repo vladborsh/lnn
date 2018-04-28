@@ -1,0 +1,128 @@
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Network</title>
+</head>
+
+<body data-gr-c-s-loaded="true" cz-shortcut-listen="true">
+
+  <main role="main" class="container">
+
+    <h1 class="mt-5 mb-4">Linear neural network</h1>
+
+    <!-- Step 1 -->
+    <div class="card" id="dataInputCard">
+      <div class="card-body">
+        <h2>Choose data set</h2>
+        <p class="lead">Select incoming dataset (*.csv) which must be organized as follows (student,speciality,mark); and outgoing dataset
+          (*.csv) which should be organized as follows (student,graduations) </p>
+        <div class="form-group">
+          <label for="exampleInputEmail1">Input file</label>
+          <div class="input-group">
+            <div class="custom-file">
+              <input type="file" class="custom-file-input" id="inputFile">
+              <label class="custom-file-label" for="inputFile">Choose file</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="exampleInputEmail1">Output file</label>
+          <div class="input-group">
+            <div class="custom-file">
+              <input type="file" class="custom-file-input" id="outputFile">
+              <label class="custom-file-label" for="outputFile">Choose file</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <button type="button" class="btn btn-primary" disabled="true" id="submitInboutdDataButton" onclick="submitInboutData()">Submit</button>
+        </div>
+        <div class="form-group">
+          <div class="row">
+            <div class="col-sm">
+              <div class="card" id="inputDataRowExampleCard" style="font-size:85%; max-height: 120px; overflow: scroll; display:none">
+                <div class="card-body" id="inputDataRowExample">
+                </div>
+              </div>
+            </div>
+            <div class="col-sm">
+              <div class="card" id="outputDataRowExampleCard" style="font-size:85%; max-height: 120px; overflow: scroll; display:none">
+                <div class="card-body" id="outputDataRowExample" style="overflow-y: scroll;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="card" id="trainNetworkCard" style="display: none">
+      <div class="card-body">
+        <h2>Train network</h2>
+        <p class="lead">Click button to train</p>
+        <div class="form-group">
+          <div class="row">
+            <div class="col-sm">
+              <h4>Model state</h4>
+              <div class="card">
+                <div class="card-body" id="networkModel" style="font-size:80%; max-height: 220px; overflow: scroll;">
+                </div>
+              </div>
+            </div>
+            <div class="col-sm">
+              <h4>Train log</h4>
+              <div class="card" id="trainModeLogCard" style="font-size:80%; max-height: 220px; overflow: scroll; display:none">
+                <div class="card-body" id="trainModelLog">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <button type="button" class="btn btn-primary" id="submitInboutdDataButton" onclick="train()">Train</button>
+          <button type="button" class="btn btn-primary" disabled="true" id="goToTestModelButton" onclick="goToTestModel()">Test my input</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="card" id="testNetworkCard" style="display: none">
+      <div class="card-body">
+        <h2>Test network</h2>
+        <p class="lead">Input some test data</p>
+        <div class="form-group">
+          <input type="number" class="form-control" id="mark1" placeholder="Humanitarian average mark">
+        </div>
+        <div class="form-group">
+          <input type="number" class="form-control" id="mark2" placeholder="Natural science average mark">
+        </div>
+        <div class="form-group">
+          <input type="number" class="form-control" id="mark3" placeholder="Programming average mark">
+        </div>
+        <div class="form-group">
+          <button type="button" class="btn btn-primary" id="testModelButton" onclick="testModel()">Test</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="card" id="resultsCard" style="display: none">
+      <div class="card-body">
+        <h2>Results</h2>
+        <div class="alert alert-success" role="alert" id="resultAlert">
+        </div>
+        <div class="form-group">
+          <!-- <button type="button" class="btn btn-primary" onclick="tryAgain()">Try again</button> -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="text/javascript" src="dist/main.bundle.js" charset="utf-8"></script>
+
+</body>
+
+</html>
